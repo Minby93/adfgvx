@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 
+
 # Создание квадрата Полибия
 def generate_polybius_square():
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # Алфавит [A-Z, 0-9]
@@ -27,21 +28,24 @@ def encrypte(message, key):
 
 # Окончательное шифрование с помощью ключевого слова
 def final_encrypte(message, key):
-    while(len(message) % len(key) != 0):  # Выравнивание длины сообщения в зависимости от длины ключа
-        message += "X"
+    padding_len = 0
+    if len(message) % len(key) != 0:  # Проверка на необходимость добавления символов выравнивания
+        padding_len = len(key) - len(message) % len(key)  # Сколько символов нужно добавить
+        message += "X" * padding_len  # Добавляю символы выравнивания
 
     encrypted_message = ""
-    columns = {k: [] for k in key}
+    key_indices = list(range(len(key)))  # Индексы символов ключа
+    columns = {i: [] for i in key_indices}
 
-    for i, char in enumerate(message):  # Запись сообщения в колонки относительно ключа
-        columns[key[i % len(key)]].append(char)
+    for i, char in enumerate(message):  # Запись сообщения в колонки относительно индексов ключа
+        columns[i % len(key)].append(char)
         
-    sorted_columns = dict(sorted(columns.items()))  # Перестановка столбцов при сортировки ключа по алфавиту
+    sorted_key_indices = sorted(key_indices, key=lambda x: key[x])  # Сортировка индексов ключа по алфавиту символов ключа
 
-    for k in sorted_columns:
-        encrypted_message += "".join(sorted_columns[k])  # Запись зашифрованного сообщения
+    for k in sorted_key_indices:
+        encrypted_message += "".join(columns[k])  # Запись зашифрованного сообщения
     
-    return encrypted_message
+    return encrypted_message + str(padding_len)  # Добавляем количество добавленных символов в конец строки
 
 # Окончательная дешифровка по квадрату Полибия
 def decrypte_square(message, square):
@@ -55,28 +59,41 @@ def decrypte_square(message, square):
 
 # Дешифровка сообщения в состояния для расшифровки квадратом Полибия
 def decrypte(message, key):
+    # Извлекаем количество добавленных символов
+    padding_len = int(message[-1])  # Последний символ — это количество добавленных символов
+    message = message[:-1]  # Удаляем этот символ
+
     decrypted_message = ""
     col_size = len(message) // len(key)  # Нахожу длину колонки
 
-    columns = {k: [] for k in sorted(key)}
+    key_indices = list(range(len(key)))  # Индексы символов ключа
+    sorted_key_indices = sorted(key_indices, key=lambda x: key[x])  # Сортировка индексов ключа по алфавиту символов ключа
+
+    columns = {i: [] for i in sorted_key_indices}
     temp_message = message
-    for k in columns:  # Привожу к виду колонок отсортированных по ключу
-        for i in range(col_size):
-            columns[k].append(temp_message[i])       
+    for i in sorted_key_indices:  # Привожу к виду колонок отсортированных по ключу
+        for j in range(col_size):
+            columns[i].append(temp_message[j])       
         temp_message = temp_message[col_size:]
 
-    unsorted_key_columns = {k: [] for k in key}
-    for k in columns:  # Возвращаю колонки с изначальному положению (ключ без сортировик по алфавиту)
-        for i in unsorted_key_columns:
-            if k == i:
-                unsorted_key_columns[k] = columns[i]
-                break
-    
-    for i in range(col_size):  # Приведение к строке для дальнейшей дешифровки по квадрату Полибия
-        for k in unsorted_key_columns:
-            decrypted_message += unsorted_key_columns[k][i]
+    unsorted_key_columns = {i: [] for i in key_indices}
+    for i in sorted_key_indices:  # Возвращаю колонки к изначальному положению
+        unsorted_key_columns[i] = columns[i]
 
-    return decrypte_square(decrypted_message, generate_polybius_square())
+    for i in range(col_size):  # Приведение к строке для дальнейшей дешифровки по квадрату Полибия
+        for j in key_indices:
+            decrypted_message += unsorted_key_columns[j][i]
+    if padding_len > 0:
+        decrypted_message = decrypted_message[:-padding_len]  # Удаление лишних символов
+    # Удаление добавленных символов выравнивания
+    decrypted_message = decrypte_square(decrypted_message, generate_polybius_square())
+
+    return decrypted_message
+
+# Тестирование
+# encrypted_message = encrypte("password", "kky")
+# print(encrypted_message)
+# print(decrypte(encrypted_message, "kky"))
 
 # Интерфейс приложения
 def encrypt_text():
@@ -143,12 +160,3 @@ output_text.pack()
 
 # Запуск главного цикла
 window.mainloop()
-
-
-
-    
-
-
-
-
-    
